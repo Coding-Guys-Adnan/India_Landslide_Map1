@@ -7,7 +7,7 @@ let map,layerGroup;
 async function init(){
   setLoader(20,'Fetching data from API…');
   try {
-    const response = await fetch('http://127.0.0.1:8001/api/data');
+    const response = await fetch('https://landslide-backend-rlbx.onrender.com/api/data');
     if (!response.ok) throw new Error('API failed to respond');
     setLoader(80,'Parsing records…');
     RAW_DATA = await response.json();
