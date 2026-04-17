@@ -2,6 +2,11 @@ import pandas as pd
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import math
+import os
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+file_path = os.path.join(BASE_DIR, "Landslide_Labeled_ResearchGrade.csv")
+
 
 app = FastAPI()
 
@@ -18,7 +23,7 @@ data = []
 @app.on_event("startup")
 def load_data():
     global data
-    df = pd.read_csv("Landslide_Labeled_ResearchGrade.csv")
+    df = pd.read_csv(file_path)
     def safe_val(x):
         if pd.isna(x):
             return None
