@@ -1,105 +1,48 @@
-# India Seismic & Landslide Risk Atlas — Research Grade
+# Landslide Intelligence Platform 🌍
 
-![License](https://img.shields.io/badge/license-MIT-blue.svg?style=for-the-badge)
-![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white)
-![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white)
-![Leaflet](https://img.shields.io/badge/Leaflet-199900?style=for-the-badge&logo=leaflet&logoColor=white)
-![OpenStreetMap](https://img.shields.io/badge/OpenStreetMap-7EC0EE?style=for-the-badge&logo=openstreetmap&logoColor=white)
+The Landslide Intelligence Platform is a comprehensive, real-time Machine Learning application designed to predict and visualize landslide susceptibility across the Indian subcontinent based on live seismic triggers (USGS/NCS feeds) and antecedent rainfall (IMD/ERA5).
 
-> A high-performance, full-stack geospatial platform designed for **disaster analysis, geospatial research, hazard visualization, and academic use**.
-
----
-
-## 📖 Overview
-The **India Seismic & Landslide Risk Atlas** is an advanced interactive dashboard engineered to analyze and visualize over 15,000 seismic events and consequential landslide triggers across the Indian subcontinent (2000–2026). 
-
-Built to handle research-grade analytical datasets, the platform dynamically analyzes earthquakes mapped directly against pivotal spatial infrastructure—such as focal depth, rainfall buffers, terrain slope, NDVI (vegetation density), and soil properties—to actively contextualize mass-movement vulnerability. 
-
-## ✨ Key Features
-- **Interactive Seismic Visualization**: Dynamically map points cleanly segmented by precise Magnitude (Mw), Peak Ground Acceleration (PGA), or Focal Depth constraints.
-- **Landslide Risk Mapping**: Overlay known confirmed landslide occurrences natively on top of the seismic data map to draw geological correlations gracefully onto the UI.
-- **Regional Comparison**: Compare seismic profiles and average triggers across distinct geographic zones (e.g., Himalayan Belt vs. Peninsular India) using deep statistical layouts.
-- **Multi-Source Detection**: Visualize detection methodologies powered by combined academic thresholds, USGS arrays, and established Seismic algorithms.
-- **Advanced Filtering**: Live, stateless DOM filtration by Region, Temporal range (Year), and Confirmed occurrence status for instantaneous dataset isolation across all map overlays. 
-- **Research-Grade Analytics**: Extract real-time sub-layer averages parsing critical metrics mapping components like intersecting soil compositions (sand/clay pH) and vegetation densities directly into sidebar analytics.
+## Architecture Overview
+This ecosystem is decoupled into three primary components:
+1. **The Machine Learning Poller Engine** (`Live_Landslide_Predictor_19.py`)
+2. **The FastAPI Backend Server** (`backend/main.py`)
+3. **The Frontend Interactive Dashboard** (`frontend/`)
 
 ---
 
-## 📸 Screenshots
+## 1. The Core ML Engine (`Live_Landslide_Predictor_19.py`)
 
-![Dashboard Overview](docs/dashboard_placeholder1.png)
-*Detailed interactive mapping of earthquake magnitudes using Leaflet clusters & UI Panels.*
+This standalone Python script forms the mathematical backbone of our system. It is responsible for training, caching, and continuously querying live global APIs.
 
-![Regional Comparison](docs/dashboard_placeholder2.png)
-*Granular analytics parsing 30-day cumulative rainfall and slope topography models.*
-
----
-
-## 🛠️ Tech Stack
-This application leverages a decoupled, asynchronous architecture maximizing data streaming performance when dealing with large datasets:
-
-- **Backend**: Python 3, FastAPI, Pandas, Uvicorn
-- **Frontend**: Vanilla JavaScript (Async Fetch API), HTML5, CSS3 Variables
-- **Mapping & Geospatial**: Leaflet.js, OpenStreetMap tileset
+- **Data Harvesting:** Native fetchers interact with `USGS GeoJSON` and `NCS` (National Center for Seismology) endpoints to retrieve live earthquakes. It simultaneously pulls gridded rainfall data.
+- **Topographic & Soil Mapping:** Upon a live trigger event, it calculates derived physics constraints, pulling elevations via Copernicus GLO-30 DEM APIs, soil compositions via SoilGrids REST, and NDVI vegetation indexes via Sentinel-2.
+- **The Prediction Matrix:** The data is pushed through a Soft-Voting Ensemble model fusing Random Forest (RF), Gradient Boosting (GB), and Logistic Regression (LR) algorithms to output a localized landslide probability.
+- **Automated Mail Alerts:** The `send_report_email` pipeline dynamically formats high-risk alerts and generates localized HTML reports seamlessly sent to target inboxes via Google SMTP when a >35% threshold is crossed.
 
 ---
 
-## 📁 Project Structure
-```text
-📦 India-Seismic-Risk-Atlas
-├── 📂 backend
-│   ├── main.py                 # FastAPI server & dataset injection logic
-│   └── requirements.txt        # Python dependency lists
-├── 📂 frontend
-│   ├── index.html              # Core application scaffold & UI elements
-│   ├── script.js               # Async operations, Leaflet bindings, and filtering routines
-│   └── style.css               # Dynamic dark theme aesthetics
-├── Landslide_Labeled_ResearchGrade.xlsx   # Sourced Dataset
-└── README.md
-```
+## 2. API Backend & Cache Server (`backend/main.py`)
 
-## 🚀 Installation 
+The backend spins up using FastAPI and completely insulates the heavy-lifting daemon thread from the frontend.
 
-### Prerequisites
-- Python 3.8+
-- Modern Web Browser
+- **Daemon Decoupling:** `main.py` imports and spins the ML engine inside an isolated background daemon thread. This allows the backend to endlessly poll global APIs for earthquakes without blocking website visitors.
+- **In-Memory Caching:** As predictions execute, they are cached into a threaded `predictions_queue` and locked via `threading.Lock()`.
+- **REST Endpoints:** Exposes `/api/data` for the master dataset, `/api/earthquakes`, `/api/rainfall`, `/api/predictions` for live rolling data, and `/api/history` for historical High-Risk event parsing.
+- **Subscription Engine:** The `/api/subscribe` route allows users to pass in an email. It hooks dynamically back into our SMTP mailer to fire instantaneous "Welcome" and "Data Context" reports out of the active memory queue.
 
-### 1. Setup Backend
-Navigate into the backend directory and install the required Python packages.
-```bash
-cd backend
-pip install -r requirements.txt
-```
+---
 
-Launch the FastAPI application:
-```bash
-python -m uvicorn main:app --port 8000
-```
+## 3. Frontend Web Dashboard (`frontend/`)
 
-### 2. Setup Frontend
-In a new terminal window, spin up a basic HTTP server to serve the frontend client cleanly from the local directory:
-```bash
-cd frontend
-python -m http.server 8001
-```
+A completely static frontend layer utilizing raw CSS, Vanilla JavaScript, and Leaflet Maps, meaning it compiles instantly with zero framework overhead.
 
-## 💻 Usage
-1. Ensure the Python backend parses the datasets and logs: `Application startup complete`.
-2. Open your browser and navigate to `http://localhost:8001`.
-3. Use the **horizontal navigation bar** to hot-swap map data visualizations instantly.
-4. Interact with the **Left Sidebar** to trigger cascading filters to isolate geospatial and temporal occurrences.
-5. Click on any mapped marker node to spawn detailed localized metrics inside a popup!
+### Key Pages
+- `index.html`: The Historical Atlas. Leverages `data.js` to asynchronously ingest the master CSV payload, compiling thousands of data points onto the Leaflet map and providing rich filtering mechanics (by year, region, magnitude).
+- `dashboard.html`: The Analytics interface. Implements Chart.js alongside the Leaflet layer, providing deep quantitative analytics into terrain variations, seismic distributions, and risk predictions. It also houses the **Live Risk Prediction** pane for manual input testing against the `/predict` route.
+- `live.html`: The Real-Time Radar. Hooks into the fast-paced memory queue, polling the API every 10 seconds. It structurally visualizes new earthquakes and rainfall flags the moment the daemon finishes computing the probabilities. It dynamically renders risk badges, updates debug stats, and allows mapping history queries by fetching from from the new `/api/history` route.
 
-## 📊 Data Sources
-This system ingests data compiled under the `Landslide_Labeled_ResearchGrade.xlsx` schema. Information is actively corroborated and harmonized across global registries including:
-- USGS FDSNWS
-- Newmark/Jibson seismic threshold models
-- Combined regional rainfall methodologies.
-
-## 🔭 Future Improvements
-- **Predictive AI Layer**: Implement Scikit-Learn Random Forests into the Python backend to algorithmically forecast expected mass movements on raw forecasted seismic data.
-- **Pagination & Vector Chunking**: Shift processing to GeoJSON chunk-based mapping systems for infinitely scaling datasets beyond 100k+ global events.
-- **Dockerization**: Containerize both the FastAPI backend and web server frontend using Docker Compose for streamlined 1-click deployments.
-
-## 📜 License
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+## Execution
+1. Install requirements.
+2. Ensure you have the `landslide_pipeline_model.pkl` located near the execution directory.
+3. Open `backend` and run `python -m uvicorn main:app --port 8001`.
+4. Open the frontend by running `python -m http.server 8002` locally!
